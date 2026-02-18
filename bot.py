@@ -1,104 +1,86 @@
+import os
 import smtplib
 from email.message import EmailMessage
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-# --- CONFIGURATION ---
-TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
-MY_EMAIL = "apka-email@gmail.com"      # Jahan order receive karna hai
-APP_PASSWORD = "your-app-password"      # 16-digit Google App Password
+# --- CLOUD SETTINGS (Render se uthayega) ---
+TOKEN = os.getenv("TOKEN")
+MY_EMAIL = os.getenv("MY_EMAIL")
+APP_PASSWORD = os.getenv("APP_PASSWORD")
 
-# Dictionary to store user's current selection temporarily
-user_orders = {}
+user_data = {}
 
-# --- EMAIL FUNCTION ---
-def send_order_email(user_name, item_name):
+MENU = {
+    "burger": {"Cheese Burger": 99, "Chinese Burger": 120, "Veg Maharaja": 150},
+    "chinese": {"Veg Manchurian": 120, "Veg Fried Rice": 100, "Hakka Noodles": 110, "Spring Rolls": 80},
+    "tea": {"Masala Tea": 20, "Ginger Coffee": 40, "Cold Coffee": 70}
+}
+
+def send_order_email(name, address, cart, total):
+    items_text = "\n".join([f"• {item} — ₹{price}" for item, price in cart.items()])
     msg = EmailMessage()
-    msg.set_content(f"Naya Order Aaya Hai!\n\nCustomer Name: {user_name}\nItem: {item_name}")
-    msg['Subject'] = f"Cafe Order: {item_name} by {user_name}"
+    msg.set_content(f"Naya Order!\n\nCustomer: {name}\nAddress: {address}\n\nItems:\n{items_text}\n\nTotal: ₹{total}")
+    msg['Subject'] = f"Cafe Order: {name} (₹{total})"
     msg['From'] = MY_EMAIL
     msg['To'] = MY_EMAIL
-
     try:
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
             smtp.login(MY_EMAIL, APP_PASSWORD)
             smtp.send_message(msg)
         return True
-    except Exception as e:
-        print(f"Email Error: {e}")
-        return False
+    except: return False
 
-# --- HANDLERS ---
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("🍔 Burger Menu", callback_data='burger_cat')],
-        [InlineKeyboardButton("☕ Tea Menu", callback_data='tea_cat')],
-        [InlineKeyboardButton("📍 Address", callback_data='address'),
-         InlineKeyboardButton("📞 Phone", callback_data='phone')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text('☕ *Welcome to Our Cafe!* \nNiche diye gaye options se order karein:', 
-                                  reply_markup=reply_markup, parse_mode='Markdown')
+async def start(update, context):
+    user_id = update.effective_user.id
+    user_data[user_id] = {"cart": {}, "total": 0, "state": "ORDERING"}
+    keyboard = [[InlineKeyboardButton("🍔 Burgers", callback_data='cat_burger'), InlineKeyboardButton("🍜 Chinese", callback_data='cat_chinese')],
+                [InlineKeyboardButton("☕ Drinks", callback_data='cat_tea')],
+                [InlineKeyboardButton("🛒 Checkout", callback_data='checkout')]]
+    await update.message.reply_text('👋 *Welcome to Ashish Cafe (Cloud)!*', reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
-async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_callback(update, context):
     query = update.callback_query
     await query.answer()
+    user_id = query.from_user.id
+    if user_id not in user_data: return
+    if query.data.startswith('cat_'):
+        cat = query.data.split('_')[1]
+        kb = [[InlineKeyboardButton(f"{i} (₹{p})", callback_data=f"add_{i}_{p}")] for i, p in MENU[cat].items()]
+        kb.append([InlineKeyboardButton("⬅️ Back", callback_data='back_main')])
+        await query.edit_message_text(f"--- {cat.upper()} ---", reply_markup=InlineKeyboardMarkup(kb))
+    elif query.data.startswith('add_'):
+        _, item, price = query.data.split('_')
+        user_data[user_id]["cart"][item] = user_data[user_id]["cart"].get(item, 0) + int(price)
+        user_data[user_id]["total"] += int(price)
+        kb = [[InlineKeyboardButton("➕ Add More", callback_data='back_main')], [InlineKeyboardButton("✅ Checkout", callback_data='checkout')]]
+        await query.edit_message_text(f"Added {item}! Total: ₹{user_data[user_id]['total']}", reply_markup=InlineKeyboardMarkup(kb))
+    elif query.data == 'back_main':
+        kb = [[InlineKeyboardButton("🍔 Burgers", callback_data='cat_burger'), InlineKeyboardButton("🍜 Chinese", callback_data='cat_chinese')], [InlineKeyboardButton("☕ Drinks", callback_data='cat_tea')], [InlineKeyboardButton("🛒 Checkout", callback_data='checkout')]]
+        await query.edit_message_text("Select Category:", reply_markup=InlineKeyboardMarkup(kb))
+    elif query.data == 'checkout':
+        user_data[user_id]["state"] = "ASK_NAME"
+        await query.edit_message_text(f"Bill: ₹{user_data[user_id]['total']}\n\nApna *Naam* likhein:", parse_mode='Markdown')
 
-    if query.data == 'burger_cat':
-        keyboard = [
-            [InlineKeyboardButton("Veg Burger - ₹99", callback_data='order_Veg Burger')],
-            [InlineKeyboardButton("Cheese Burger - ₹129", callback_data='order_Cheese Burger')],
-            [InlineKeyboardButton("⬅️ Back", callback_data='main_menu')]
-        ]
-        await query.edit_message_text("🍔 *Burgers Selection:*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-
-    elif query.data == 'tea_cat':
-        keyboard = [
-            [InlineKeyboardButton("Masala Tea - ₹20", callback_data='order_Masala Tea')],
-            [InlineKeyboardButton("Ginger Tea - ₹25", callback_data='order_Ginger Tea')],
-            [InlineKeyboardButton("⬅️ Back", callback_data='main_menu')]
-        ]
-        await query.edit_message_text("☕ *Tea Selection:*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
-
-    elif query.data.startswith('order_'):
-        item = query.data.replace('order_', '')
-        user_orders[query.from_user.id] = item # Store item
-        await query.edit_message_text(f"✅ Aapne *{item}* select kiya hai.\n\nAb apna **Pura Naam** type karke bhejein taaki hum order confirm kar sakein.", parse_mode='Markdown')
-
-    elif query.data == 'address':
-        await query.edit_message_text("📍 *Address:* Shop No. 5, Food Street, New Delhi.\n\n[Back to Menu](t.me/yourbotusername)", parse_mode='Markdown')
-
-    elif query.data == 'phone':
-        await query.edit_message_text("📞 *Contact:* +91 9876543210\nTiming: 10 AM - 11 PM", parse_mode='Markdown')
-
-    elif query.data == 'main_menu':
-        await start(query, context)
-
-async def handle_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_text(update, context):
     user_id = update.message.from_user.id
-    if user_id in user_orders:
-        user_name = update.message.text
-        item_ordered = user_orders[user_id]
-        
-        # Send Email
-        success = send_order_email(user_name, item_ordered)
-        
-        if success:
-            await update.message.reply_text(f"🎉 Shukriya {user_name}!\n\nAapka *{item_ordered}* ka order book ho gaya hai. Humne cafe manager ko mail bhej diya hai.")
-        else:
-            await update.message.reply_text("❌ Sorry, mail bhejne mein error aaya. Manager ko call karein.")
-        
-        del user_orders[user_id] # Clear order session
-    else:
-        await update.message.reply_text("Pehle menu se koi item select karein! Type /start")
+    if user_id not in user_data: return
+    state = user_data[user_id].get("state")
+    if state == "ASK_NAME":
+        user_data[user_id]["name"] = update.message.text
+        user_data[user_id]["state"] = "ASK_ADDRESS"
+        await update.message.reply_text("Ab apna *Delivery Address* likhein:", parse_mode='Markdown')
+    elif state == "ASK_ADDRESS":
+        addr = update.message.text
+        if send_order_email(user_data[use upr_id]["name"], addr, user_data[user_id]["cart"], user_data[user_id]["total"]):
+            await update.message.reply_text("🎉 Order Confirmed! Mail bhej diya gaya hai.")
+        del user_data[user_id]
 
 def main():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_click))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_name))
-    
-    print("Cafe Bot is LIVE...")
+    app.add_handler(CallbackQueryHandler(handle_callback))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.run_polling()
 
 if __name__ == '__main__':
