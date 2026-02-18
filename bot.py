@@ -1,10 +1,24 @@
-import os
+    import os
 import smtplib
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from email.message import EmailMessage
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-# --- CLOUD SETTINGS (Render Environment Variables) ---
+# --- DUMMY SERVER JUGAD (Render ko khush karne ke liye) ---
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is Zinda!")
+
+def run_dummy_server():
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    server.serve_forever()
+
+# --- BOT SETTINGS ---
 TOKEN = os.getenv("TOKEN")
 MY_EMAIL = os.getenv("MY_EMAIL")
 APP_PASSWORD = os.getenv("APP_PASSWORD")
@@ -34,10 +48,10 @@ def send_order_email(name, address, cart, total):
 async def start(update, context):
     user_id = update.effective_user.id
     user_data[user_id] = {"cart": {}, "total": 0, "state": "ORDERING"}
-    keyboard = [[InlineKeyboardButton("🍔 Burgers", callback_data='cat_burger'), InlineKeyboardButton("🍜 Chinese", callback_data='cat_chinese')],
-                [InlineKeyboardButton("☕ Drinks", callback_data='cat_tea')],
-                [InlineKeyboardButton("🛒 Checkout", callback_data='checkout')]]
-    await update.message.reply_text('👋 *Welcome to Ashish Cafe (Cloud)!*', reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+    kb = [[InlineKeyboardButton("🍔 Burgers", callback_data='cat_burger'), InlineKeyboardButton("🍜 Chinese", callback_data='cat_chinese')],
+          [InlineKeyboardButton("☕ Drinks", callback_data='cat_tea')],
+          [InlineKeyboardButton("🛒 Checkout", callback_data='checkout')]]
+    await update.message.reply_text('👋 *Welcome to Ashish Cafe!*', reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
 
 async def handle_callback(update, context):
     query = update.callback_query
@@ -57,46 +71,37 @@ async def handle_callback(update, context):
         user_data[user_id]["total"] += int(price)
         kb = [[InlineKeyboardButton("➕ Add More", callback_data='back_main')], [InlineKeyboardButton("✅ Checkout", callback_data='checkout')]]
         await query.edit_message_text(f"Added {item}! Total: ₹{user_data[user_id]['total']}", reply_markup=InlineKeyboardMarkup(kb))
-    
+
     elif query.data == 'back_main':
         kb = [[InlineKeyboardButton("🍔 Burgers", callback_data='cat_burger'), InlineKeyboardButton("🍜 Chinese", callback_data='cat_chinese')], [InlineKeyboardButton("☕ Drinks", callback_data='cat_tea')], [InlineKeyboardButton("🛒 Checkout", callback_data='checkout')]]
         await query.edit_message_text("Select Category:", reply_markup=InlineKeyboardMarkup(kb))
-    
+
     elif query.data == 'checkout':
         user_data[user_id]["state"] = "ASK_NAME"
-        await query.edit_message_text(f"Bill: ₹{user_data[user_id]['total']}\n\nApna *Naam* likhein:", parse_mode='Markdown')
+        await query.edit_message_text(f"Total: ₹{user_data[user_id]['total']}\n\nNaam likhein:")
 
 async def handle_text(update, context):
     user_id = update.message.from_user.id
     if user_id not in user_data: return
     state = user_data[user_id].get("state")
-    
     if state == "ASK_NAME":
         user_data[user_id]["name"] = update.message.text
         user_data[user_id]["state"] = "ASK_ADDRESS"
-        await update.message.reply_text("Ab apna *Delivery Address* likhein:", parse_mode='Markdown')
-    
+        await update.message.reply_text("Address likhein:")
     elif state == "ASK_ADDRESS":
-        addr = update.message.text
-        name = user_data[user_id]["name"]
-        cart = user_data[user_id]["cart"]
-        total = user_data[user_id]["total"]
-        
-        if send_order_email(name, addr, cart, total):
-            await update.message.reply_text(f"🎉 Order Confirmed!\n\nShukriya {name}, aapka ₹{total} ka order book ho gaya hai.")
-        else:
-            await update.message.reply_text("❌ Email bhejte waqt error aaya.")
+        if send_order_email(user_data[user_id]["name"], update.message.text, user_data[user_id]["cart"], user_data[user_id]["total"]):
+            await update.message.reply_text("🎉 Order Done!")
         del user_data[user_id]
 
 def main():
-    if not TOKEN:
-        print("Error: TOKEN environment variable not found!")
-        return
+    # Jugad Server chalu karein
+    threading.Thread(target=run_dummy_server, daemon=True).start()
+    
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    print("Bot is Running on Cloud...")
+    print("Bot is Running with Port Jugad...")
     app.run_polling()
 
 if __name__ == '__main__':
