@@ -1,16 +1,23 @@
-import os
+  import os
 import smtplib
 import threading
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from email.message import EmailMessage
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
+# --- JUGADH SETTINGS ---
+MY_PHONE = "8078619566" # <--- Yahan apna WhatsApp number 91 ke saath likhein
+
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot is Running!")
+        self.wfile.write(b"Bot is Zinda!")
+    def do_HEAD(self):
+        self.send_response(200)
+        self.end_headers()
 
 def run_dummy_server():
     port = int(os.environ.get("PORT", 8080))
@@ -22,7 +29,6 @@ MY_EMAIL = os.getenv("MY_EMAIL")
 APP_PASSWORD = os.getenv("APP_PASSWORD")
 
 user_data = {}
-
 MENU = {
     "burger": {"Cheese Burger": 99, "Chinese Burger": 120, "Veg Maharaja": 150},
     "chinese": {"Veg Manchurian": 120, "Veg Fried Rice": 100, "Hakka Noodles": 110, "Spring Rolls": 80},
@@ -56,35 +62,54 @@ async def handle_callback(update, context):
     await query.answer()
     user_id = query.from_user.id
     if user_id not in user_data: return
+    
     if query.data.startswith('cat_'):
         cat = query.data.split('_')[1]
         kb = [[InlineKeyboardButton(f"{i} (₹{p})", callback_data=f"add_{i}_{p}")] for i, p in MENU[cat].items()]
         kb.append([InlineKeyboardButton("⬅️ Back", callback_data='back_main')])
         await query.edit_message_text(f"--- {cat.upper()} ---", reply_markup=InlineKeyboardMarkup(kb))
+    
     elif query.data.startswith('add_'):
         _, item, price = query.data.split('_')
         user_data[user_id]["cart"][item] = user_data[user_id]["cart"].get(item, 0) + int(price)
         user_data[user_id]["total"] += int(price)
         kb = [[InlineKeyboardButton("➕ Add More", callback_data='back_main')], [InlineKeyboardButton("✅ Checkout", callback_data='checkout')]]
         await query.edit_message_text(f"Added {item}! Total: ₹{user_data[user_id]['total']}", reply_markup=InlineKeyboardMarkup(kb))
+
     elif query.data == 'back_main':
         kb = [[InlineKeyboardButton("🍔 Burgers", callback_data='cat_burger'), InlineKeyboardButton("🍜 Chinese", callback_data='cat_chinese')], [InlineKeyboardButton("☕ Drinks", callback_data='cat_tea')], [InlineKeyboardButton("🛒 Checkout", callback_data='checkout')]]
         await query.edit_message_text("Select Category:", reply_markup=InlineKeyboardMarkup(kb))
+
     elif query.data == 'checkout':
         user_data[user_id]["state"] = "ASK_NAME"
-        await query.edit_message_text(f"Total: ₹{user_data[user_id]['total']}\n\nNaam likhein:")
+        await query.edit_message_text(f"Total Bill: ₹{user_data[user_id]['total']}\n\nApna *Naam* likhein:", parse_mode='Markdown')
 
 async def handle_text(update, context):
     user_id = update.message.from_user.id
     if user_id not in user_data: return
     state = user_data[user_id].get("state")
+
     if state == "ASK_NAME":
         user_data[user_id]["name"] = update.message.text
         user_data[user_id]["state"] = "ASK_ADDRESS"
-        await update.message.reply_text("Address likhein:")
+        await update.message.reply_text("Ab apna *Delivery Address* likhein:")
+
     elif state == "ASK_ADDRESS":
-        if send_order_email(user_data[user_id]["name"], update.message.text, user_data[user_id]["cart"], user_data[user_id]["total"]):
-            await update.message.reply_text("🎉 Order Done!")
+        addr = update.message.text
+        name = user_data[user_id]["name"]
+        total = user_data[user_id]["total"]
+        cart = user_data[user_id]["cart"]
+        
+        # WhatsApp Message Create Karein
+        items_list = ", ".join(cart.keys())
+        wa_text = f"Hello! I want to confirm my order.\nName: {name}\nItems: {items_list}\nTotal: ₹{total}\nAddress: {addr}"
+        encoded_text = urllib.parse.quote(wa_text)
+        wa_link = f"https://wa.me/{MY_PHONE}?text={encoded_text}"
+        
+        if send_order_email(name, addr, cart, total):
+            kb = [[InlineKeyboardButton("💬 Confirm on WhatsApp", url=wa_link)]]
+            await update.message.reply_text(f"🎉 Order Received!\n\nNiche diye gaye button par click karke humein WhatsApp par bhi bata dein:", 
+                                          reply_markup=InlineKeyboardMarkup(kb))
         del user_data[user_id]
 
 def main():
@@ -93,7 +118,6 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    print("Bot is Running...")
     app.run_polling()
 
 if __name__ == '__main__':
