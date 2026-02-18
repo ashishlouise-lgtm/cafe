@@ -1,0 +1,1 @@
+worker: python cafe_bot.py
