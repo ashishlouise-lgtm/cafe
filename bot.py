@@ -8,7 +8,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 # --- JUGADH SETTINGS ---
-MY_PHONE = "919571646540" # Aapka Raj Laxmi Jewellers/Maa Ambey wala contact number
+MY_PHONE = "918078619566" # Aapka Raj Laxmi Jewellers/Maa Ambey wala contact number
 
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
