@@ -7,14 +7,18 @@ from email.message import EmailMessage
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
-# --- JUGADH SETTINGS ---
-MY_PHONE = "918078619566" # Aapka Raj Laxmi Jewellers/Maa Ambey wala contact number
+# --- SETTINGS ---
+MY_PHONE = "918078619566" 
+TOKEN = os.getenv("TOKEN")
+MY_EMAIL = os.getenv("MY_EMAIL")
+APP_PASSWORD = os.getenv("APP_PASSWORD")
 
+# Health Check for Render
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Crushescafe Bot is Active!")
+        self.wfile.write(b"Bot is Zinda!")
     def do_HEAD(self):
         self.send_response(200)
         self.end_headers()
@@ -24,10 +28,6 @@ def run_dummy_server():
     server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
     server.serve_forever()
 
-TOKEN = os.getenv("TOKEN")
-MY_EMAIL = os.getenv("MY_EMAIL")
-APP_PASSWORD = os.getenv("APP_PASSWORD")
-
 user_data = {}
 MENU = {
     "burger": {"Cheese Burger": 99, "Chinese Burger": 120, "Veg Maharaja": 150},
@@ -36,18 +36,20 @@ MENU = {
 }
 
 def send_order_email(name, address, cart, total):
-    items_text = "\n".join([f"• {item}" for item in cart.keys()])
-    msg = EmailMessage()
-    msg.set_content(f"Naya Order!\n\nCustomer: {name}\nAddress: {address}\n\nItems:\n{items_text}\n\nTotal: ₹{total}")
-    msg['Subject'] = f"Cafe Order: {name} (₹{total})"
-    msg['From'] = MY_EMAIL
-    msg['To'] = MY_EMAIL
     try:
+        items_text = "\n".join([f"• {item}" for item in cart.keys()])
+        msg = EmailMessage()
+        msg.set_content(f"Naya Order!\n\nCustomer: {name}\nAddress: {address}\n\nItems:\n{items_text}\n\nTotal: ₹{total}")
+        msg['Subject'] = f"Cafe Order: {name} (₹{total})"
+        msg['From'] = MY_EMAIL
+        msg['To'] = MY_EMAIL
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
             smtp.login(MY_EMAIL, APP_PASSWORD)
             smtp.send_message(msg)
         return True
-    except: return False
+    except Exception as e:
+        print(f"Email Error: {e}")
+        return False
 
 async def start(update, context):
     user_id = update.effective_user.id
@@ -63,25 +65,24 @@ async def handle_callback(update, context):
     user_id = query.from_user.id
     if user_id not in user_data: return
     
-    data = query.data
-    if data.startswith('cat_'):
-        cat = data.split('_')[1]
+    if query.data.startswith('cat_'):
+        cat = query.data.split('_')[1]
         kb = [[InlineKeyboardButton(f"{i} (₹{p})", callback_data=f"add_{i}_{p}")] for i, p in MENU[cat].items()]
         kb.append([InlineKeyboardButton("⬅️ Back", callback_data='back_main')])
         await query.edit_message_text(f"--- {cat.upper()} MENU ---", reply_markup=InlineKeyboardMarkup(kb))
     
-    elif data.startswith('add_'):
-        _, item, price = data.split('_')
+    elif query.data.startswith('add_'):
+        _, item, price = query.data.split('_')
         user_data[user_id]["cart"][item] = user_data[user_id]["cart"].get(item, 0) + int(price)
         user_data[user_id]["total"] += int(price)
         kb = [[InlineKeyboardButton("➕ Add More", callback_data='back_main')], [InlineKeyboardButton("✅ Checkout", callback_data='checkout')]]
         await query.edit_message_text(f"Added {item}! Total: ₹{user_data[user_id]['total']}", reply_markup=InlineKeyboardMarkup(kb))
 
-    elif data == 'back_main':
+    elif query.data == 'back_main':
         kb = [[InlineKeyboardButton("🍔 Burgers", callback_data='cat_burger'), InlineKeyboardButton("🍜 Chinese", callback_data='cat_chinese')], [InlineKeyboardButton("☕ Drinks", callback_data='cat_tea')], [InlineKeyboardButton("🛒 Checkout", callback_data='checkout')]]
         await query.edit_message_text("Category chunein:", reply_markup=InlineKeyboardMarkup(kb))
 
-    elif data == 'checkout':
+    elif query.data == 'checkout':
         if not user_data[user_id]["cart"]:
             await query.edit_message_text("Cart khali hai! /start")
             return
@@ -96,20 +97,27 @@ async def handle_text(update, context):
     if state == "ASK_NAME":
         user_data[user_id]["name"] = update.message.text
         user_data[user_id]["state"] = "ASK_ADDRESS"
-        await update.message.reply_text("Ab apna *Address* likhein:")
+        await update.message.reply_text("Ab apna *Delivery Address* likhein:")
 
     elif state == "ASK_ADDRESS":
         addr = update.message.text
-        name = user_data[user_id]["name"]
-        total = user_data[user_id]["total"]
-        cart = user_data[user_id]["cart"]
+        name = user_data[user_id].get("name", "Customer")
+        total = user_data[user_id].get("total", 0)
+        cart = user_data[user_id].get("cart", {})
         
-        wa_text = f"Hello! Order Confirm:\nName: {name}\nItems: {', '.join(cart.keys())}\nTotal: ₹{total}\nAddress: {addr}"
+        # WhatsApp Link Generation
+        items_list = ", ".join(cart.keys())
+        wa_text = f"New Order: \nName: {name}\nItems: {items_list}\nTotal: ₹{total}\nAddress: {addr}"
         wa_link = f"https://wa.me/{MY_PHONE}?text={urllib.parse.quote(wa_text)}"
         
+        # Email bhejte waqt error aaye toh bhi WhatsApp button dikhao
         send_order_email(name, addr, cart, total)
+        
         kb = [[InlineKeyboardButton("💬 Confirm on WhatsApp", url=wa_link)]]
-        await update.message.reply_text(f"🎉 Order Received!\n\nNiche button par click karke WhatsApp par confirm karein:", reply_markup=InlineKeyboardMarkup(kb))
+        await update.message.reply_text(f"🎉 *Order Processed!*\n\nNiche button par click karke WhatsApp par order confirm karein:", 
+                                      reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
+        
+        # Session reset
         del user_data[user_id]
 
 def main():
