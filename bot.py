@@ -3,11 +3,11 @@ import json
 import threading
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
+from telegram import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # --- CONFIG ---
-MY_PHONE = "8078619566" #
+MY_PHONE = "8078619566" 
 TOKEN = os.getenv("TOKEN")
 WEB_LINK = "https://ashishlouise-lgtm.github.io/cafe/"
 
@@ -25,11 +25,18 @@ user_data = {}
 async def start(update, context):
     uid = update.effective_user.id
     user_data[uid] = {"cart": [], "total": 0, "state": "ORDERING"}
-    kb = [[InlineKeyboardButton("📱 Open Menu Website", web_app=WebAppInfo(url=WEB_LINK))]]
-    await update.message.reply_text("✨ *Crushescafe* ✨\nNiche button se menu kholein:", reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
+    
+    # YE SABSE ZAROORI HAI: KeyboardButton se hi data bot tak jayega
+    web_app = WebAppInfo(url=WEB_LINK)
+    kb = [[KeyboardButton("📱 Open Stylish Menu", web_app=web_app)]]
+    
+    await update.message.reply_text(
+        "✨ *Welcome to Crushescafe!* ✨\n\nNiche keyboard mein jo 'Open Menu' button aaya hai, use dabakar order karein:",
+        reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True),
+        parse_mode='Markdown'
+    )
 
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Website ka data yahan aayega"""
     uid = update.effective_user.id
     data = json.loads(update.effective_message.web_app_data.data)
     user_data[uid] = {"cart": data['items'], "total": data['total'], "state": "ASK_NAME"}
@@ -47,7 +54,7 @@ async def handle_text(update, context):
     if state == "ASK_NAME":
         user_data[uid]["name"] = txt
         user_data[uid]["state"] = "ASK_ADDRESS"
-        await update.message.reply_text("📍 Ab apna **Address** likhein:")
+        await update.message.reply_text("📍 Ab apna **Full Address** likhein:")
 
     elif state == "ASK_ADDRESS":
         name = user_data[uid]["name"]
@@ -55,8 +62,8 @@ async def handle_text(update, context):
         items = ", ".join(user_data[uid]["cart"])
         wa_text = f"New Order: {name}\nItems: {items}\nTotal: ₹{total}\nAddress: {txt}"
         wa_link = f"https://wa.me/{MY_PHONE}?text={urllib.parse.quote(wa_text)}"
-        kb = [[InlineKeyboardButton("💬 Confirm on WhatsApp", url=wa_link)]]
-        await update.message.reply_text("🎉 *Process Complete!* \nNiche button se WhatsApp par bhejein:", reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
+        
+        await update.message.reply_text(f"🎉 *Order Processed!* \nNiche button se WhatsApp par confirm karein:\n\n{wa_link}")
         del user_data[uid]
 
 def main():
