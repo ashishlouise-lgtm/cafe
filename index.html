@@ -6,24 +6,27 @@
     <title>Crushescafe Premium</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 20px; }
-        .header { background: linear-gradient(135deg, #ff8c00, #e67e22); color: white; padding: 25px; text-align: center; border-radius: 0 0 25px 25px; }
-        .tabs { display: flex; overflow-x: auto; padding: 15px; background: white; sticky: top; top: 0; z-index: 100; gap: 10px; border-bottom: 1px solid #ddd; scrollbar-width: none; }
-        .tab { padding: 8px 20px; background: #eee; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; white-space: nowrap; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 20px; color: #333; }
+        .header { background: linear-gradient(135deg, #ff8c00, #e67e22); color: white; padding: 25px; text-align: center; border-radius: 0 0 25px 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .tabs { display: flex; overflow-x: auto; padding: 15px; background: white; position: sticky; top: 0; z-index: 100; gap: 10px; border-bottom: 1px solid #ddd; scrollbar-width: none; }
+        .tab { padding: 8px 20px; background: #eee; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.3s; }
         .active-tab { background: #e67e22; color: white; }
         .menu-container { padding: 15px; }
         .item { background: white; border-radius: 15px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 5px solid #e67e22; }
-        .info h3 { margin: 0; font-size: 16px; color: #333; }
+        .info h3 { margin: 0; font-size: 16px; }
         .info p { margin: 5px 0 0; color: #e67e22; font-weight: bold; }
         .add-btn { background: #27ae60; color: white; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="header"><h1>🍕 Crushescafe</h1><p>Taste the Magic in Every Bite!</p></div>
+<div class="header">
+    <h1>🍕 Crushescafe</h1>
+    <p>Best Taste in Ajmer!</p>
+</div>
 
 <div class="tabs">
-    <button class="tab active-tab" onclick="filterMenu('all', this)">All Items</button>
+    <button class="tab active-tab" onclick="filterMenu('all', this)">All</button>
     <button class="tab" onclick="filterMenu('burger', this)">🍔 Burgers</button>
     <button class="tab" onclick="filterMenu('pizza', this)">🍕 Pizza</button>
     <button class="tab" onclick="filterMenu('chinese', this)">🍜 Chinese</button>
@@ -82,7 +85,7 @@
         tg.MainButton.show();
     }
 
-    // MAIN EVENT: Jab niche wala bada button dabaya jaye
+    // MAIN EVENT: Jab Telegram ka niche wala blue button dabaya jaye
     tg.onEvent('mainButtonClicked', function(){
         tg.sendData(JSON.stringify({ items: cart, total: total }));
     });
