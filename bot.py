@@ -7,9 +7,9 @@ from telegram import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # --- CONFIG ---
-MY_PHONE = "8078619566" 
+MY_PHONE = "8078619566" # Aapka number
 TOKEN = os.getenv("TOKEN")
-WEB_LINK = "https://ashishlouise-lgtm.github.io/cafe/"
+WEB_LINK = "https://ashishlouise-lgtm.github.io/cafe/" #
 
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -26,9 +26,9 @@ async def start(update, context):
     uid = update.effective_user.id
     user_data[uid] = {"cart": [], "total": 0, "state": "ORDERING"}
     
-    # YE SABSE ZAROORI HAI: KeyboardButton se hi data bot tak jayega
+    # Keyboard Button (Official Method for Data Transfer)
     web_app = WebAppInfo(url=WEB_LINK)
-    kb = [[KeyboardButton("📱 Open Stylish Menu", web_app=web_app)]]
+    kb = [[KeyboardButton("📱 Open Menu Website", web_app=web_app)]]
     
     await update.message.reply_text(
         "✨ *Welcome to Crushescafe!* ✨\n\nNiche keyboard mein jo 'Open Menu' button aaya hai, use dabakar order karein:",
@@ -37,6 +37,7 @@ async def start(update, context):
     )
 
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Confirm Order dabate hi ye chalega"""
     uid = update.effective_user.id
     data = json.loads(update.effective_message.web_app_data.data)
     user_data[uid] = {"cart": data['items'], "total": data['total'], "state": "ASK_NAME"}
@@ -63,7 +64,7 @@ async def handle_text(update, context):
         wa_text = f"New Order: {name}\nItems: {items}\nTotal: ₹{total}\nAddress: {txt}"
         wa_link = f"https://wa.me/{MY_PHONE}?text={urllib.parse.quote(wa_text)}"
         
-        await update.message.reply_text(f"🎉 *Order Processed!* \nNiche button se WhatsApp par confirm karein:\n\n{wa_link}")
+        await update.message.reply_text(f"🎉 *Order Taiyaar Hai!* \nNiche link se WhatsApp par confirm karein:\n\n{wa_link}")
         del user_data[uid]
 
 def main():
