@@ -1,4 +1,4 @@
-import os
+     import os
 import json
 import threading
 import urllib.parse
@@ -7,9 +7,9 @@ from telegram import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, Update, In
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # --- CONFIG ---
-MY_PHONE = "918078619566" # Yahan apna sahi number '91' ke saath likhein
+MY_PHONE = "918078619566" 
 TOKEN = os.getenv("TOKEN")
-WEB_LINK = "https://ashishlouise-lgtm.github.io/cafe/"
+WEB_LINK = "https://ashishlouise-lgtm.github.io/cafe/" 
 
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -56,22 +56,24 @@ async def handle_text(update, context):
     elif state == "ASK_ADDRESS":
         name = user_data[uid]["name"]
         total = user_data[uid]["total"]
-        # Items ko list se string mein badlein
-        items_list = user_data[uid]["cart"]
-        items_str = ", ".join(items_list)
+        items_str = ", ".join(user_data[uid]["cart"])
         
-        # WhatsApp Message taiyaar karein
+        # WhatsApp Message taiyaar karna
         wa_text = f"🔥 *NEW ORDER - Crushescafe* 🔥\n\n👤 *Name:* {name}\n🍔 *Items:* {items_str}\n💰 *Total:* ₹{total}\n📍 *Address:* {txt}"
         wa_link = f"https://wa.me/{MY_PHONE}?text={urllib.parse.quote(wa_text)}"
         
-        # WhatsApp Button dikhayein
-        kb = [[InlineKeyboardButton("💬 Confirm on WhatsApp", url=wa_link)]]
-        
-        await update.message.reply_text(
-            f"🎉 *Shabaash {name}!* Aapka form bhar gaya hai.\n\nAb niche button par click karke order WhatsApp par bhej dein:",
-            reply_markup=InlineKeyboardMarkup(kb),
-            parse_mode='Markdown'
+        # Customer ke liye pyara sa success message
+        success_msg = (
+            f"🎉 *Shabaash {name}! Aapka Order Book Ho Gaya Hai!* 🥳\n\n"
+            f"🍔 *Items:* {items_str}\n"
+            f"💰 *Bill:* ₹{total}\n"
+            f"📍 *Delivery Address:* {txt}\n\n"
+            f"Niche diye gaye button par click karke WhatsApp par confirm kar dein! 👇"
         )
+        
+        kb = [[InlineKeyboardButton("✅ Confirm on WhatsApp", url=wa_link)]]
+        
+        await update.message.reply_text(success_msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
         del user_data[uid]
 
 def main():
@@ -80,8 +82,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    print("Bot is Starting...")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
-    main()
+    main()   
