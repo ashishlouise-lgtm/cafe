@@ -1,52 +1,68 @@
-    import os, json, base64, requests, threading, urllib.parse, logging
+import os, json, base64, requests, threading, urllib.parse, logging
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
-# Logging setup taaki errors dikhein
+# --- LOGGING SETUP ---
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # --- CONFIG ---
-MY_PHONE = "918078619566" 
+MY_PHONE = "918078619566"
 TOKEN = os.getenv("TOKEN") 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN") 
-REPO_NAME = "ashishlouise-lgtm/cafe" 
+REPO_NAME = "ashishlouise-lgtm/cafe"
 DB_FILE = "database.json" 
 
-# --- GITHUB API LOGIC ---
-def get_github_db():
-    url = f"https://api.github.com/repos/{REPO_NAME}/contents/{DB_FILE}"
-    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-    r = requests.get(url, headers=headers)
-    if r.status_code == 200:
-        content = r.json()
-        db = json.loads(base64.b64decode(content['content']).decode())
-        return db, content['sha']
-    return {}, None
-
+# --- GITHUB API MASTER JUGAD ---
 def update_github_db(uid, name):
     try:
-        db, sha = get_github_db()
-        uid_str = str(uid)
+        url = f"https://api.github.com/repos/{REPO_NAME}/contents/{DB_FILE}"
+        headers = {
+            "Authorization": f"token {GITHUB_TOKEN}",
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "CrushescafeBot"
+        }
         
-        # Data Update
+        # 1. Get current file content & SHA
+        r = requests.get(url, headers=headers)
+        if r.status_code != 200:
+            logger.error(f"❌ GitHub Get Error: {r.status_code} - Check Repo Name or Token")
+            return 0
+            
+        content = r.json()
+        sha = content['sha']
+        db_raw = base64.b64decode(content['content']).decode('utf-8')
+        db = json.loads(db_raw)
+        
+        # 2. Update visit count
+        uid_str = str(uid)
         if uid_str not in db:
             db[uid_str] = {"name": name, "visits": 0}
         
         db[uid_str]["visits"] += 1
         db[uid_str]["name"] = name
+        new_visit_count = db[uid_str]["visits"]
         
-        # GitHub par wapas bhej rahe hain
-        new_content = base64.b64encode(json.dumps(db, indent=4).encode()).decode()
-        url = f"https://api.github.com/repos/{REPO_NAME}/contents/{DB_FILE}"
-        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-        payload = {"message": f"Update visits for {name}", "content": new_content, "sha": sha}
+        # 3. Push back to GitHub
+        updated_json = json.dumps(db, indent=4)
+        encoded_content = base64.b64encode(updated_json.encode('utf-8')).decode('utf-8')
         
-        r = requests.put(url, json=payload, headers=headers)
-        if r.status_code in [200, 201]:
-            return db[uid_str]["visits"]
+        payload = {
+            "message": f"Order by {name} - Visit #{new_visit_count}",
+            "content": encoded_content,
+            "sha": sha
+        }
+        
+        put_r = requests.put(url, json=payload, headers=headers)
+        if put_r.status_code in [200, 201]:
+            logger.info(f"✅ SUCCESS: GitHub updated for {name}")
+            return new_visit_count
+        else:
+            logger.error(f"❌ GitHub Put Error: {put_r.status_code} - {put_r.text}")
+            
     except Exception as e:
-        logging.error(f"GitHub Error: {e}")
+        logger.error(f"💥 Master Jugad Crash: {e}")
     return 0
 
 # --- BOT LOGIC ---
@@ -57,7 +73,7 @@ async def start(update, context):
     user_data[uid] = {"state": "ORDERING"}
     web_app = WebAppInfo(url=f"https://ashishlouise-lgtm.github.io/cafe/")
     kb = [[KeyboardButton("📱 Open Stylish Menu", web_app=web_app)]]
-    await update.message.reply_text("✨ *Welcome to Crushescafe!* ✨\n\nMenu kholein:", 
+    await update.message.reply_text("✨ *Welcome to Crushescafe!* ✨\n\nNiche button se menu kholein:", 
                                    reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True), parse_mode='Markdown')
 
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -94,12 +110,13 @@ async def handle_callback(update, context):
     if query.data == "clear_order":
         if uid in user_data:
             name = user_data[uid].get("name", "Grahak")
-            # YAHAN ASLI FIX HAI: GitHub API ko call kar rahe hain
             visit_no = update_github_db(uid, name)
             
-            msg = f"💖 *Shukriya {name}!* \nAapki {visit_no}th visit register ho gayi. 🙏"
-            if visit_no >= 20: msg += "\n\n🎁 *LOYALTY ALERT:* Discount milega!"
-            
+            if visit_no > 0:
+                msg = f"💖 *Shukriya {name}!* \nAapki {visit_no}th visit register ho gayi. 🙏"
+            else:
+                msg = f"💖 *Order Sent!* \nShukriya Vijay bhai! Database mein thoda issue hai, par order humne note kar liya hai."
+                
             await query.edit_message_text(msg, parse_mode='Markdown')
             del user_data[uid]
 
