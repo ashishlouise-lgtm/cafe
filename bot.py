@@ -3,13 +3,13 @@ import json
 import threading
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from telegram import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, Update
+from telegram import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # --- CONFIG ---
-MY_PHONE = "8078619566" # Aapka number
+MY_PHONE = "918078619566" # Yahan apna sahi number '91' ke saath likhein
 TOKEN = os.getenv("TOKEN")
-WEB_LINK = "https://ashishlouise-lgtm.github.io/cafe/" #
+WEB_LINK = "https://ashishlouise-lgtm.github.io/cafe/"
 
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -25,11 +25,8 @@ user_data = {}
 async def start(update, context):
     uid = update.effective_user.id
     user_data[uid] = {"cart": [], "total": 0, "state": "ORDERING"}
-    
-    # Keyboard Button (Official Method for Data Transfer)
     web_app = WebAppInfo(url=WEB_LINK)
-    kb = [[KeyboardButton("📱 Open Menu Website", web_app=web_app)]]
-    
+    kb = [[KeyboardButton("📱 Open Stylish Menu", web_app=web_app)]]
     await update.message.reply_text(
         "✨ *Welcome to Crushescafe!* ✨\n\nNiche keyboard mein jo 'Open Menu' button aaya hai, use dabakar order karein:",
         reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True),
@@ -37,11 +34,10 @@ async def start(update, context):
     )
 
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Confirm Order dabate hi ye chalega"""
     uid = update.effective_user.id
     data = json.loads(update.effective_message.web_app_data.data)
     user_data[uid] = {"cart": data['items'], "total": data['total'], "state": "ASK_NAME"}
-    await update.message.reply_text(f"🧾 *Order Received!* Total: ₹{data['total']}\n\nApna **Naam** likhein:", parse_mode='Markdown')
+    await update.message.reply_text(f"🧾 *Order Received!* Total: ₹{data['total']}\n\nAb apna **Naam** likhein:", parse_mode='Markdown')
 
 async def handle_text(update, context):
     uid = update.message.from_user.id
@@ -60,11 +56,22 @@ async def handle_text(update, context):
     elif state == "ASK_ADDRESS":
         name = user_data[uid]["name"]
         total = user_data[uid]["total"]
-        items = ", ".join(user_data[uid]["cart"])
-        wa_text = f"New Order: {name}\nItems: {items}\nTotal: ₹{total}\nAddress: {txt}"
+        # Items ko list se string mein badlein
+        items_list = user_data[uid]["cart"]
+        items_str = ", ".join(items_list)
+        
+        # WhatsApp Message taiyaar karein
+        wa_text = f"🔥 *NEW ORDER - Crushescafe* 🔥\n\n👤 *Name:* {name}\n🍔 *Items:* {items_str}\n💰 *Total:* ₹{total}\n📍 *Address:* {txt}"
         wa_link = f"https://wa.me/{MY_PHONE}?text={urllib.parse.quote(wa_text)}"
         
-        await update.message.reply_text(f"🎉 *Order Taiyaar Hai!* \nNiche link se WhatsApp par confirm karein:\n\n{wa_link}")
+        # WhatsApp Button dikhayein
+        kb = [[InlineKeyboardButton("💬 Confirm on WhatsApp", url=wa_link)]]
+        
+        await update.message.reply_text(
+            f"🎉 *Shabaash {name}!* Aapka form bhar gaya hai.\n\nAb niche button par click karke order WhatsApp par bhej dein:",
+            reply_markup=InlineKeyboardMarkup(kb),
+            parse_mode='Markdown'
+        )
         del user_data[uid]
 
 def main():
@@ -73,6 +80,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    print("Bot is Starting...")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
