@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crushescafe Premium Menu</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 20px; color: #333; }
+        
+        /* Header Section */
+        .header { background: linear-gradient(135deg, #ff8c00, #e67e22); color: white; padding: 30px 15px; text-align: center; border-radius: 0 0 30px 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header h1 { margin: 0; font-size: 28px; letter-spacing: 1px; }
+        .header p { margin: 5px 0 0; opacity: 0.9; font-size: 14px; }
+
+        /* Category Tabs */
+        .tabs { display: flex; overflow-x: auto; padding: 15px; background: white; position: sticky; top: 0; z-index: 1000; gap: 12px; border-bottom: 1px solid #eee; scrollbar-width: none; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab { padding: 10px 22px; background: #f8f9fa; border-radius: 25px; border: 1px solid #ddd; font-weight: 700; cursor: pointer; white-space: nowrap; transition: 0.3s; color: #555; }
+        .active-tab { background: #e67e22; color: white; border-color: #d35400; box-shadow: 0 3px 8px rgba(230, 126, 34, 0.3); }
+
+        /* Menu Items */
+        .menu-container { padding: 15px; }
+        .item { background: white; border-radius: 18px; padding: 18px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 6px solid #e67e22; position: relative; overflow: hidden; }
+        .info h3 { margin: 0; font-size: 18px; color: #2c3e50; }
+        .info p { margin: 6px 0 0; color: #e67e22; font-weight: 800; font-size: 16px; }
+        
+        .add-btn { background: #27ae60; color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 3px 6px rgba(39, 174, 96, 0.2); }
+        .add-btn:active { transform: scale(0.9); }
+
+        /* Clear UI */
+        .clear-ui { text-align: center; padding: 10px; display: none; }
+        .clear-link { color: #e74c3c; font-weight: bold; text-decoration: underline; cursor: pointer; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🔥 Crushescafe 🔥</h1>
+    <p>Taste the Magic in Every Bite!</p>
+</div>
+
+<div class="tabs">
+    <button class="tab active-tab" onclick="filterMenu('all', this)">All Items</button>
+    <button class="tab" onclick="filterMenu('burger', this)">🍔 Burgers</button>
+    <button class="tab" onclick="filterMenu('pizza', this)">🍕 Pizza</button>
+    <button class="tab" onclick="filterMenu('chinese', this)">🍜 Chinese</button>
+    <button class="tab" onclick="filterMenu('drinks', this)">🥤 Drinks</button>
+</div>
+
+<div class="clear-ui" id="clearUI">
+    <span class="clear-link" onclick="clearCart()">❌ Clear Everything / Cancel</span>
+</div>
+
+<div class="menu-container" id="menu"></div>
+
+<script>
+    let tg = window.Telegram.WebApp;
+    tg.expand();
+    
+    // Telegram MainButton Setup
+    tg.MainButton.setText("CONFIRM ORDER");
+    tg.MainButton.textColor = "#FFFFFF";
+    tg.MainButton.color = "#2c3e50";
+    tg.MainButton.hide();
+
+    let cart = [];
+    let total = 0;
+
+    // Full Menu List
+    const menuData = [
+        { name: "Cheese Burger", price: 99, cat: "burger" },
+        { name: "Veg Maharaja Burger", price: 150, cat: "burger" },
+        { name: "Aloo Tikki Burger", price: 60, cat: "burger" },
+        { name: "Farmhouse Pizza", price: 199, cat: "pizza" },
+        { name: "Peppy Paneer Pizza", price: 249, cat: "pizza" },
+        { name: "Veg Manchurian", price: 120, cat: "chinese" },
+        { name: "Hakka Noodles", price: 110, cat: "chinese" },
+        { name: "Masala Tea", price: 20, cat: "drinks" },
+        { name: "Cold Coffee", price: 70, cat: "drinks" },
+        { name: "Oreo Shake", price: 120, cat: "drinks" }
+    ];
+
+    function renderMenu(category = 'all') {
+        const container = document.getElementById('menu');
+        container.innerHTML = '';
+        const filtered = category === 'all' ? menuData : menuData.filter(i => i.cat === category);
+        filtered.forEach(item => {
+            container.innerHTML += `
+                <div class="item">
+                    <div class="info"><h3>${item.name}</h3><p>₹${item.price}</p></div>
+                    <button class="add-btn" onclick="addToCart('${item.name}', ${item.price})">ADD +</button>
+                </div>`;
+        });
+    }
+
+    function filterMenu(cat, btn) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active-tab'));
+        btn.classList.add('active-tab');
+        renderMenu(cat);
+    }
+
+    function addToCart(name, price) {
+        cart.push(name);
+        total += price;
+        document.getElementById('clearUI').style.display = 'block';
+        
+        tg.MainButton.setText(`CONFIRM ORDER (₹${total})`);
+        tg.MainButton.show();
+        tg.HapticFeedback.impactOccurred('medium');
+    }
+
+    function clearCart() {
+        cart = [];
+        total = 0;
+        document.getElementById('clearUI').style.display = 'none';
+        tg.MainButton.hide();
+        tg.HapticFeedback.notificationOccurred('warning');
+    }
+
+    // MAIN EVENT: Jab Telegram ka blue button dabaya jaye
+    tg.onEvent('mainButtonClicked', function(){
+        if (cart.length === 0) return;
+        const data = JSON.stringify({
+            items: cart,
+            total: total
+        });
+        tg.sendData(data); // Yeh data bot.py ko bhej dega
+    });
+
+    renderMenu();
+</script>
+</body>
+</html>
