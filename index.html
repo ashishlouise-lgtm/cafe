@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crushescafe Premium Menu</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; color: #333; }
+        .header { background: linear-gradient(135deg, #e67e22, #d35400); color: white; padding: 30px 15px; text-align: center; border-radius: 0 0 25px 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        
+        .tabs { display: flex; overflow-x: auto; padding: 15px; background: white; position: sticky; top: 0; z-index: 100; gap: 10px; border-bottom: 1px solid #ddd; }
+        .tab { padding: 10px 20px; background: #f0f0f0; border-radius: 25px; white-space: nowrap; cursor: pointer; border: 2px solid transparent; font-weight: 600; transition: 0.3s; }
+        .active-tab { background: #e67e22; color: white; border-color: #d35400; }
+
+        .menu-container { padding: 15px; padding-bottom: 100px; }
+        .menu-item { background: white; border-radius: 15px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 5px solid #e67e22; }
+        .item-info h3 { margin: 0; font-size: 17px; color: #2c3e50; }
+        .item-info p { margin: 5px 0 0; color: #e67e22; font-weight: bold; font-size: 15px; }
+        
+        .add-btn { background: #27ae60; color: white; border: none; padding: 10px 18px; border-radius: 12px; font-weight: bold; cursor: pointer; active { transform: scale(0.95); } }
+
+        .cart-bar { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #2c3e50; color: white; padding: 18px; border-radius: 20px; text-align: center; font-weight: bold; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 1000; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🍕 Crushescafe</h1>
+    <p>Taste the Magic in Every Bite!</p>
+</div>
+
+<div class="tabs">
+    <button class="tab active-tab" onclick="filterMenu('all', this)">All Items</button>
+    <button class="tab" onclick="filterMenu('burger', this)">🍔 Burgers</button>
+    <button class="tab" onclick="filterMenu('pizza', this)">🍕 Pizza</button>
+    <button class="tab" onclick="filterMenu('chinese', this)">🍜 Chinese</button>
+    <button class="tab" onclick="filterMenu('drinks', this)">🥤 Drinks</button>
+</div>
+
+<div class="menu-container" id="menu"></div>
+
+<div class="cart-bar" id="cartBar" onclick="sendOrderToBot()">
+    🛒 Confirm Order (₹<span id="totalPrice">0</span>)
+</div>
+
+<script>
+    let tg = window.Telegram.WebApp;
+    tg.expand();
+
+    const menuData = [
+        { name: "Cheese Burger", price: 99, cat: "burger" },
+        { name: "Veg Maharaja Burger", price: 150, cat: "burger" },
+        { name: "Farmhouse Pizza", price: 199, cat: "pizza" },
+        { name: "Peppy Paneer Pizza", price: 249, cat: "pizza" },
+        { name: "Veg Manchurian", price: 120, cat: "chinese" },
+        { name: "Hakka Noodles", price: 110, cat: "chinese" },
+        { name: "Spring Rolls (4pc)", price: 80, cat: "chinese" },
+        { name: "Masala Tea", price: 20, cat: "drinks" },
+        { name: "Cold Coffee", price: 70, cat: "drinks" },
+        { name: "Oreo Shake", price: 120, cat: "drinks" }
+    ];
+
+    let cart = [];
+    let total = 0;
+
+    function renderMenu(category = 'all') {
+        const container = document.getElementById('menu');
+        container.innerHTML = '';
+        const filtered = category === 'all' ? menuData : menuData.filter(i => i.cat === category);
+        
+        filtered.forEach(item => {
+            container.innerHTML += `
+                <div class="menu-item">
+                    <div class="item-info">
+                        <h3>${item.name}</h3>
+                        <p>₹${item.price}</p>
+                    </div>
+                    <button class="add-btn" onclick="addToCart('${item.name}', ${item.price})">ADD +</button>
+                </div>`;
+        });
+    }
+
+    function filterMenu(cat, btn) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active-tab'));
+        btn.classList.add('active-tab');
+        renderMenu(cat);
+    }
+
+    function addToCart(name, price) {
+        cart.push(name);
+        total += price;
+        document.getElementById('cartBar').style.display = 'block';
+        document.getElementById('totalPrice').innerText = total;
+    }
+
+    function sendOrderToBot() {
+        const orderData = { items: cart, total: total };
+        tg.sendData(JSON.stringify(orderData));
+    }
+
+    renderMenu();
+</script>
+</body>
+</html>
