@@ -1,5 +1,4 @@
-    
-    import os, json, base64, requests, threading, urllib.parse, logging
+import os, json, base64, requests, threading, urllib.parse, logging
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
@@ -45,7 +44,7 @@ async def start(update, context):
     uid = update.effective_user.id
     user_data[uid] = {"state": "ORDERING"}
     web_app = WebAppInfo(url=f"https://ashishlouise-lgtm.github.io/cafe/")
-    kb = [[KeyboardButton("📱 Open Stylish Menu", web_app=web_app)]]
+    kb = [[KeyboardButton("📱 Open Menu", web_app=web_app)]]
     await update.message.reply_text("✨ *Crushescafe* ✨\nMenu kholein:", reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True), parse_mode='Markdown')
 
 async def handle_text(update, context):
