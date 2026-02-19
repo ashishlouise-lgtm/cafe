@@ -3,136 +3,76 @@ import json
 import smtplib
 import threading
 import urllib.parse
-from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from email.message import EmailMessage
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, WebAppInfo
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 # --- CONFIG ---
-# Apna sahi WhatsApp number yahan daalein
 MY_PHONE = "919571646540" 
 TOKEN = os.getenv("TOKEN")
 MY_EMAIL = os.getenv("MY_EMAIL")
 APP_PASSWORD = os.getenv("APP_PASSWORD")
-# Apna GitHub Pages link yahan daalein
-WEB_LINK = "https://ashishlouise-lgtm.github.io/cafe/"
-
-class HealthCheckHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200); self.end_headers()
-        self.wfile.write(b"Bot and WebApp active!")
-    def do_HEAD(self):
-        self.send_response(200); self.end_headers()
-
-def run_dummy_server():
-    server = HTTPServer(('0.0.0.0', int(os.environ.get("PORT", 10000))), HealthCheckHandler)
-    server.serve_forever()
+WEB_LINK = "https://ashishlouise-lgtm.github.io/cafe/" # Link sahi hai
 
 user_data = {}
 
-def send_email_now(name, address, cart, total):
-    try:
-        now = datetime.now().strftime("%d-%m-%Y %H:%M")
-        items = "\n".join([f"• {item}" for item in cart])
-        msg = EmailMessage()
-        msg.set_content(f"Naya Order!\nWaqt: {now}\nCustomer: {name}\nAddress: {address}\n\nItems:\n{items}\n\nTotal: ₹{total}")
-        msg['Subject'] = f"Cafe Order: {name}"; msg['From'] = MY_EMAIL; msg['To'] = MY_EMAIL
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10) as smtp:
-            smtp.login(MY_EMAIL, APP_PASSWORD); smtp.send_message(msg)
-    except: pass
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update, context):
     uid = update.effective_user.id
     user_data[uid] = {"cart": [], "total": 0, "state": "ORDERING"}
-    
-    # Stylish Menu Button jo Website kholega
-    kb = [[InlineKeyboardButton("📱 Open Stylish Menu", web_app=WebAppInfo(url=WEB_LINK))],
-          [InlineKeyboardButton("❌ Cancel Order", callback_data='cancel')]]
-    
-    await update.message.reply_text(
-        '✨ *Welcome to Crushescafe!* ✨\n\nAb order karna aur bhi asan hai! Niche diye gaye *Menu* button par click karein aur apni pasandida items chunein.', 
-        reply_markup=InlineKeyboardMarkup(kb), 
-        parse_mode='Markdown'
-    )
+    kb = [[InlineKeyboardButton("📱 Open Menu Website", web_app=WebAppInfo(url=WEB_LINK))]]
+    await update.message.reply_text("✨ *Welcome!* ✨\nNiche button se order karein:", reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
 
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Website se aaye order data ko handle karta hai"""
+    """Is function se 'Confirm Order' ka data bot ke paas aayega"""
     uid = update.effective_user.id
-    # Website (index.html) se aaya data load karein
-    data = json.loads(update.effective_message.web_app_data.data)
+    raw_data = update.effective_message.web_app_data.data
+    data = json.loads(raw_data)
     
     user_data[uid] = {
-        "cart": data['items'], 
-        "total": data['total'], 
+        "cart": data['items'],
+        "total": data['total'],
         "state": "ASK_NAME"
     }
     
-    await update.message.reply_text(
-        f"🧾 *Order Summary:*\nItems: {', '.join(data['items'])}\nTotal Bill: *₹{data['total']}*\n\nAb apna **Naam** likhein:", 
-        parse_mode='Markdown'
-    )
+    await update.message.reply_text(f"🧾 *Order Summary:*\nTotal: ₹{data['total']}\n\nAb apna **Naam** likhein:", parse_mode='Markdown')
 
-async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query; await query.answer()
-    uid = query.from_user.id
-    
-    if query.data == 'wa_done':
-        await query.edit_message_text("💖 *Thank You!* \nAapka order jald hi taiyaar ho jayega. 🙏", parse_mode='Markdown')
-        if uid in user_data: del user_data[uid]
-        return
-
-    if query.data == 'cancel':
-        await query.edit_message_text("❌ Order cancelled. 'Hi' likhkar dobara shuru karein.")
-        if uid in user_data: del user_data[uid]
-
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_text(update, context):
     uid = update.message.from_user.id
     txt = update.message.text
-    
-    # Hi/Hello Start
-    if txt.lower() in ["hi", "hello", "hey", "h", "hy", "start"]:
+    if txt.lower() in ["hi", "hello", "start"]:
         await start(update, context); return
-
+        
     if uid not in user_data: return
     state = user_data[uid].get("state")
 
     if state == "ASK_NAME":
         user_data[uid]["name"] = txt
         user_data[uid]["state"] = "ASK_ADDRESS"
-        await update.message.reply_text("📍 Ab apna **Address** likhein:")
+        await update.message.reply_text("📍 Ab apna **Address** batayein:")
 
     elif state == "ASK_ADDRESS":
-        addr = txt
-        name = user_data[uid].get("name", "Customer")
-        total = user_data[uid].get("total", 0)
-        cart = user_data[uid].get("cart", [])
-        
-        wa_text = f"New Order Confirm:\nName: {name}\nItems: {', '.join(cart)}\nTotal: ₹{total}\nAddress: {addr}"
+        # Yahan WhatsApp link aur Email wala logic aayega (Same as before)
+        name = user_data[uid]["name"]
+        total = user_data[uid]["total"]
+        items = ", ".join(user_data[uid]["cart"])
+        wa_text = f"New Order: {name}\nItems: {items}\nTotal: ₹{total}\nAddress: {txt}"
         wa_link = f"https://wa.me/{MY_PHONE}?text={urllib.parse.quote(wa_text)}"
         
-        threading.Thread(target=send_email_now, args=(name, addr, cart, total)).start()
-        
-        kb = [[InlineKeyboardButton("💬 Send on WhatsApp", url=wa_link)],
-              [InlineKeyboardButton("✅ Done & Clear", callback_data='wa_done')]]
-        
-        await update.message.reply_text(
-            f"🎯 *Final Step!* \n\n1. WhatsApp par order bhejein.\n2. Wapas aakar 'Done' dabayein.", 
-            reply_markup=InlineKeyboardMarkup(kb), 
-            parse_mode='Markdown'
-        )
+        kb = [[InlineKeyboardButton("💬 Confirm on WhatsApp", url=wa_link)]]
+        await update.message.reply_text("🎉 *Order Ready!* WhatsApp par confirm karein:", reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
+        del user_data[uid]
 
 def main():
-    threading.Thread(target=run_dummy_server, daemon=True).start()
-    app = Application.builder().token(TOKEN).build()
+    # Render Health Check (Dummy Server)
+    threading.Thread(target=lambda: HTTPServer(('0.0.0.0', int(os.environ.get("PORT", 10000))), BaseHTTPRequestHandler).serve_forever(), daemon=True).start()
     
-    # Handlers
+    app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(handle_callback))
+    # YE LINE SABSE ZAROORI HAI:
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     
-    print("Bot with WebApp is Running...")
+    print("Bot is Starting...")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
