@@ -3,34 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crushescafe Premium</title>
+    <title>Crushescafe Premium Menu</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 20px; color: #333; }
-        .header { background: linear-gradient(135deg, #ff8c00, #e67e22); color: white; padding: 25px; text-align: center; border-radius: 0 0 25px 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .tabs { display: flex; overflow-x: auto; padding: 15px; background: white; position: sticky; top: 0; z-index: 100; gap: 10px; border-bottom: 1px solid #ddd; scrollbar-width: none; }
-        .tab { padding: 8px 20px; background: #eee; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; white-space: nowrap; transition: 0.3s; }
-        .active-tab { background: #e67e22; color: white; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 20px; color: #333; }
+        
+        /* Header Section */
+        .header { background: linear-gradient(135deg, #ff8c00, #e67e22); color: white; padding: 30px 15px; text-align: center; border-radius: 0 0 30px 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header h1 { margin: 0; font-size: 28px; letter-spacing: 1px; }
+        .header p { margin: 5px 0 0; opacity: 0.9; font-size: 14px; }
+
+        /* Category Tabs */
+        .tabs { display: flex; overflow-x: auto; padding: 15px; background: white; position: sticky; top: 0; z-index: 1000; gap: 12px; border-bottom: 1px solid #eee; scrollbar-width: none; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab { padding: 10px 22px; background: #f8f9fa; border-radius: 25px; border: 1px solid #ddd; font-weight: 700; cursor: pointer; white-space: nowrap; transition: 0.3s; color: #555; }
+        .active-tab { background: #e67e22; color: white; border-color: #d35400; box-shadow: 0 3px 8px rgba(230, 126, 34, 0.3); }
+
+        /* Menu Items */
         .menu-container { padding: 15px; }
-        .item { background: white; border-radius: 15px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 5px solid #e67e22; }
-        .info h3 { margin: 0; font-size: 16px; }
-        .info p { margin: 5px 0 0; color: #e67e22; font-weight: bold; }
-        .add-btn { background: #27ae60; color: white; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .item { background: white; border-radius: 18px; padding: 18px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 6px solid #e67e22; position: relative; overflow: hidden; }
+        .info h3 { margin: 0; font-size: 18px; color: #2c3e50; }
+        .info p { margin: 6px 0 0; color: #e67e22; font-weight: 800; font-size: 16px; }
+        
+        .add-btn { background: #27ae60; color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 3px 6px rgba(39, 174, 96, 0.2); }
+        .add-btn:active { transform: scale(0.9); }
+
+        /* Clear Cart Button UI */
+        .clear-ui { text-align: center; padding: 10px; display: none; }
+        .clear-link { color: #e74c3c; font-weight: bold; text-decoration: underline; cursor: pointer; font-size: 14px; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>🍕 Crushescafe</h1>
-    <p>Best Taste in Ajmer!</p>
+    <h1>🔥 Crushescafe 🔥</h1>
+    <p>Taste the Magic in Every Bite!</p>
 </div>
 
 <div class="tabs">
-    <button class="tab active-tab" onclick="filterMenu('all', this)">All</button>
+    <button class="tab active-tab" onclick="filterMenu('all', this)">All Items</button>
     <button class="tab" onclick="filterMenu('burger', this)">🍔 Burgers</button>
     <button class="tab" onclick="filterMenu('pizza', this)">🍕 Pizza</button>
     <button class="tab" onclick="filterMenu('chinese', this)">🍜 Chinese</button>
     <button class="tab" onclick="filterMenu('drinks', this)">🥤 Drinks</button>
+</div>
+
+<div class="clear-ui" id="clearUI">
+    <span class="clear-link" onclick="clearCart()">❌ Clear Everything</span>
 </div>
 
 <div class="menu-container" id="menu"></div>
@@ -39,13 +58,16 @@
     let tg = window.Telegram.WebApp;
     tg.expand();
     
-    // Telegram Main Button Config
+    // Telegram MainButton Config
     tg.MainButton.setText("CONFIRM ORDER");
+    tg.MainButton.textColor = "#FFFFFF";
+    tg.MainButton.color = "#2c3e50";
     tg.MainButton.hide();
 
     let cart = [];
     let total = 0;
 
+    // Full Menu List
     const menuData = [
         { name: "Cheese Burger", price: 99, cat: "burger" },
         { name: "Veg Maharaja Burger", price: 150, cat: "burger" },
@@ -81,13 +103,29 @@
     function addToCart(name, price) {
         cart.push(name);
         total += price;
+        document.getElementById('clearUI').style.display = 'block';
+        
+        // Update & Show Telegram MainButton
         tg.MainButton.setText(`CONFIRM ORDER (₹${total})`);
         tg.MainButton.show();
     }
 
-    // MAIN EVENT: Jab Telegram ka niche wala blue button dabaya jaye
+    function clearCart() {
+        cart = [];
+        total = 0;
+        document.getElementById('clearUI').style.display = 'none';
+        tg.MainButton.hide();
+        tg.HapticFeedback.notificationOccurred('warning');
+    }
+
+    // MAIN EVENT: Jab Telegram ka blue button dabaya jaye
     tg.onEvent('mainButtonClicked', function(){
-        tg.sendData(JSON.stringify({ items: cart, total: total }));
+        if (cart.length === 0) return;
+        const data = JSON.stringify({
+            items: cart,
+            total: total
+        });
+        tg.sendData(data); // Yeh line bot.py ke handle_web_app_data ko signal bhejegi
     });
 
     renderMenu();
