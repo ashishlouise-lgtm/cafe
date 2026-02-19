@@ -8,22 +8,22 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 20px; }
         .header { background: linear-gradient(135deg, #ff8c00, #e67e22); color: white; padding: 25px; text-align: center; border-radius: 0 0 25px 25px; }
-        .tabs { display: flex; overflow-x: auto; padding: 15px; background: white; sticky: top; top: 0; z-index: 100; gap: 10px; border-bottom: 1px solid #ddd; }
+        .tabs { display: flex; overflow-x: auto; padding: 15px; background: white; sticky: top; top: 0; z-index: 100; gap: 10px; border-bottom: 1px solid #ddd; scrollbar-width: none; }
         .tab { padding: 8px 20px; background: #eee; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; white-space: nowrap; }
         .active-tab { background: #e67e22; color: white; }
         .menu-container { padding: 15px; }
-        .item { background: white; border-radius: 15px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .info h3 { margin: 0; font-size: 16px; }
+        .item { background: white; border-radius: 15px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 5px solid #e67e22; }
+        .info h3 { margin: 0; font-size: 16px; color: #333; }
         .info p { margin: 5px 0 0; color: #e67e22; font-weight: bold; }
         .add-btn { background: #27ae60; color: white; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="header"><h1>🍕 Crushescafe</h1><p>Best Taste in Ajmer!</p></div>
+<div class="header"><h1>🍕 Crushescafe</h1><p>Taste the Magic in Every Bite!</p></div>
 
 <div class="tabs">
-    <button class="tab active-tab" onclick="filterMenu('all', this)">All</button>
+    <button class="tab active-tab" onclick="filterMenu('all', this)">All Items</button>
     <button class="tab" onclick="filterMenu('burger', this)">🍔 Burgers</button>
     <button class="tab" onclick="filterMenu('pizza', this)">🍕 Pizza</button>
     <button class="tab" onclick="filterMenu('chinese', this)">🍜 Chinese</button>
@@ -36,10 +36,9 @@
     let tg = window.Telegram.WebApp;
     tg.expand();
     
-    // Telegram ka niche wala button config karein
-    tg.MainButton.text = "Confirm Order";
-    tg.MainButton.textColor = "#FFFFFF";
-    tg.MainButton.color = "#2c3e50";
+    // Telegram Main Button Config
+    tg.MainButton.setText("CONFIRM ORDER");
+    tg.MainButton.hide();
 
     let cart = [];
     let total = 0;
@@ -47,12 +46,14 @@
     const menuData = [
         { name: "Cheese Burger", price: 99, cat: "burger" },
         { name: "Veg Maharaja Burger", price: 150, cat: "burger" },
+        { name: "Aloo Tikki Burger", price: 60, cat: "burger" },
         { name: "Farmhouse Pizza", price: 199, cat: "pizza" },
         { name: "Peppy Paneer Pizza", price: 249, cat: "pizza" },
         { name: "Veg Manchurian", price: 120, cat: "chinese" },
         { name: "Hakka Noodles", price: 110, cat: "chinese" },
         { name: "Masala Tea", price: 20, cat: "drinks" },
-        { name: "Cold Coffee", price: 70, cat: "drinks" }
+        { name: "Cold Coffee", price: 70, cat: "drinks" },
+        { name: "Oreo Shake", price: 120, cat: "drinks" }
     ];
 
     function renderMenu(category = 'all') {
@@ -77,16 +78,13 @@
     function addToCart(name, price) {
         cart.push(name);
         total += price;
-        
-        // MainButton dikhayein aur update karein
-        tg.MainButton.setText(`Confirm Order (₹${total})`);
+        tg.MainButton.setText(`CONFIRM ORDER (₹${total})`);
         tg.MainButton.show();
     }
 
-    // Jab Telegram ka niche wala button dabaya jaye
+    // MAIN EVENT: Jab niche wala bada button dabaya jaye
     tg.onEvent('mainButtonClicked', function(){
-        const data = JSON.stringify({ items: cart, total: total });
-        tg.sendData(data);
+        tg.sendData(JSON.stringify({ items: cart, total: total }));
     });
 
     renderMenu();
