@@ -1,10 +1,10 @@
-     import os
+import os
 import json
 import threading
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
 # --- CONFIG ---
 MY_PHONE = "918078619566" 
@@ -58,31 +58,44 @@ async def handle_text(update, context):
         total = user_data[uid]["total"]
         items_str = ", ".join(user_data[uid]["cart"])
         
-        # WhatsApp Message taiyaar karna
         wa_text = f"🔥 *NEW ORDER - Crushescafe* 🔥\n\n👤 *Name:* {name}\n🍔 *Items:* {items_str}\n💰 *Total:* ₹{total}\n📍 *Address:* {txt}"
         wa_link = f"https://wa.me/{MY_PHONE}?text={urllib.parse.quote(wa_text)}"
         
-        # Customer ke liye pyara sa success message
-        success_msg = (
-            f"🎉 *Shabaash {name}! Aapka Order Book Ho Gaya Hai!* 🥳\n\n"
-            f"🍔 *Items:* {items_str}\n"
-            f"💰 *Bill:* ₹{total}\n"
-            f"📍 *Delivery Address:* {txt}\n\n"
-            f"Niche diye gaye button par click karke WhatsApp par confirm kar dein! 👇"
+        # WhatsApp button aur ek 'Done' button taaki hum ise baad mein hata sakein
+        kb = [
+            [InlineKeyboardButton("💬 Confirm on WhatsApp", url=wa_link)],
+            [InlineKeyboardButton("✅ Order Sent! Clear Chat", callback_data="clear_order")]
+        ]
+        
+        await update.message.reply_text(
+            f"🎉 *Shabaash {name}!* Aapka form bhar gaya hai.\n\n"
+            f"1️⃣ Pehle upar wale button se WhatsApp par order bhej dein.\n"
+            f"2️⃣ Phir wapas aakar 'Order Sent' dabayein.",
+            reply_markup=InlineKeyboardMarkup(kb),
+            parse_mode='Markdown'
         )
-        
-        kb = [[InlineKeyboardButton("✅ Confirm on WhatsApp", url=wa_link)]]
-        
-        await update.message.reply_text(success_msg, reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
-        del user_data[uid]
+
+async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """WhatsApp se wapas aane par message chamkane ke liye"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "clear_order":
+        # Purana WhatsApp button wala message edit karke hata dega
+        await query.edit_message_text(
+            "💖 *Shukriya! Aapka order Crushescafe par book ho gaya hai.*\n\n"
+            "Hum jald hi aapki delivery taiyaar karenge. Agle order ke liye phir se 'Hi' likhein! 🙏✨",
+            parse_mode='Markdown'
+        )
 
 def main():
     threading.Thread(target=run_dummy_server, daemon=True).start()
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(handle_callback)) # Button click handle karne ke liye
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
-    main()   
+    main()
