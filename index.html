@@ -1,4 +1,5 @@
-     <!DOCTYPE html>
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,34 +7,48 @@
     <title>Crushescafe Premium Menu</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding-bottom: 90px; }
-        .header { background: linear-gradient(135deg, #e67e22, #d35400); color: white; padding: 20px; text-align: center; border-radius: 0 0 25px 25px; }
-        .tabs { display: flex; overflow-x: auto; padding: 15px; background: white; sticky: top; top: 0; z-index: 100; gap: 10px; border-bottom: 1px solid #ddd; }
-        .tab { padding: 8px 20px; background: #eee; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; white-space: nowrap; }
-        .active-tab { background: #e67e22; color: white; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding-bottom: 100px; color: #333; }
+        .header { background: linear-gradient(135deg, #ff8c00, #e67e22); color: white; padding: 30px 15px; text-align: center; border-radius: 0 0 30px 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        /* Category Tabs */
+        .tabs { display: flex; overflow-x: auto; padding: 15px; background: white; position: sticky; top: 0; z-index: 1000; gap: 12px; border-bottom: 1px solid #eee; scrollbar-width: none; }
+        .tab { padding: 10px 22px; background: #f8f9fa; border-radius: 25px; border: 1px solid #ddd; font-weight: 700; cursor: pointer; white-space: nowrap; transition: 0.3s; color: #555; }
+        .active-tab { background: #e67e22; color: white; border-color: #d35400; box-shadow: 0 3px 8px rgba(230, 126, 34, 0.3); }
+
+        /* Menu Items */
         .menu-container { padding: 15px; }
-        .item { background: white; border-radius: 15px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .info h3 { margin: 0; font-size: 16px; }
-        .info p { margin: 5px 0 0; color: #e67e22; font-weight: bold; }
-        .add-btn { background: #27ae60; color: white; border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .cart-bar { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #2c3e50; color: white; padding: 18px; border-radius: 20px; text-align: center; font-weight: bold; display: none; cursor: pointer; border: none; width: calc(100% - 30px); }
+        .item { background: white; border-radius: 18px; padding: 18px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 6px solid #e67e22; }
+        .info h3 { margin: 0; font-size: 18px; color: #2c3e50; }
+        .info p { margin: 6px 0 0; color: #e67e22; font-weight: 800; font-size: 16px; }
+        
+        .add-btn { background: #27ae60; color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .add-btn:active { transform: scale(0.9); }
+
+        /* Confirm Order Button - Josh Wala */
+        .cart-bar { position: fixed; bottom: 20px; left: 15px; right: 15px; background: #2c3e50; color: white; padding: 20px; border-radius: 20px; text-align: center; font-weight: bold; font-size: 18px; cursor: pointer; border: none; width: calc(100% - 30px); display: none; box-shadow: 0 8px 20px rgba(0,0,0,0.3); z-index: 1001; }
     </style>
 </head>
 <body>
 
-<div class="header"><h1>🍕 Crushescafe</h1></div>
+<div class="header">
+    <h1>🔥 Crushescafe 🔥</h1>
+    <p>Best Taste in Ajmer!</p>
+</div>
 
 <div class="tabs">
     <button class="tab active-tab" onclick="filterMenu('all', this)">All Items</button>
     <button class="tab" onclick="filterMenu('burger', this)">🍔 Burgers</button>
     <button class="tab" onclick="filterMenu('pizza', this)">🍕 Pizza</button>
     <button class="tab" onclick="filterMenu('chinese', this)">🍜 Chinese</button>
+    <button class="tab" onclick="filterMenu('snacks', this)">🍟 Snacks</button>
     <button class="tab" onclick="filterMenu('drinks', this)">🥤 Drinks</button>
 </div>
 
 <div class="menu-container" id="menu"></div>
 
-<button class="cart-bar" id="cartBar" onclick="sendToBot()">Confirm Order (₹<span id="totalPrice">0</span>)</button>
+<button class="cart-bar" id="cartBar" onclick="confirmAndSend()">
+    🚀 Confirm Order (₹<span id="totalPrice">0</span>)
+</button>
 
 <script>
     let tg = window.Telegram.WebApp;
@@ -41,6 +56,7 @@
     let cart = [];
     let total = 0;
 
+    // Poora Variety Load
     const menuData = [
         { name: "Cheese Burger", price: 99, cat: "burger" },
         { name: "Veg Maharaja Burger", price: 150, cat: "burger" },
@@ -51,9 +67,13 @@
         { name: "Veg Manchurian", price: 120, cat: "chinese" },
         { name: "Hakka Noodles", price: 110, cat: "chinese" },
         { name: "Paneer Chilli", price: 160, cat: "chinese" },
+        { name: "Masala Maggi", price: 50, cat: "snacks" },
+        { name: "Cheese Sandwich", price: 80, cat: "snacks" },
+        { name: "French Fries", price: 70, cat: "snacks" },
         { name: "Masala Tea", price: 20, cat: "drinks" },
         { name: "Cold Coffee", price: 70, cat: "drinks" },
-        { name: "Oreo Shake", price: 120, cat: "drinks" }
+        { name: "Oreo Shake", price: 120, cat: "drinks" },
+        { name: "Strawberry Shake", price: 100, cat: "drinks" }
     ];
 
     function renderMenu(category = 'all') {
@@ -82,9 +102,17 @@
         document.getElementById('totalPrice').innerText = total;
     }
 
-    function sendToBot() {
-        tg.sendData(JSON.stringify({items: cart, total: total}));
-        tg.close();
+    // YEH FUNCTION DATA BOT KO BHEJEGA
+    function confirmAndSend() {
+        if (cart.length === 0) return;
+        
+        const data = JSON.stringify({
+            items: cart,
+            total: total
+        });
+
+        tg.sendData(data); // Telegram Bot ko signal bhej raha hai
+        tg.close(); // Menu band ho jayega
     }
 
     renderMenu();
