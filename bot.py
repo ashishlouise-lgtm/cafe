@@ -15,21 +15,18 @@ REPO_NAME = "ashishlouise-lgtm/cafe"
 DB_FILE = "database.json" 
 PORT = int(os.environ.get("PORT", 10000))
 
-# --- 1. DUMMY SERVER (RENDER HEALTH CHECK) ---
-# Ye Render ko batata hai ki bot zinda hai
+# --- DUMMY SERVER FOR RENDER HEALTH CHECK ---
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
-        self.send_header('Content-type', 'text/html')
         self.end_headers()
-        self.wfile.write(b"Crushescafe Bot is Running!")
+        self.wfile.write(b"Crushescafe Bot is Alive!")
 
 def run_dummy_server():
     server = HTTPServer(('0.0.0.0', PORT), HealthCheckHandler)
-    logger.info(f"✅ Dummy Server started on port {PORT}")
     server.serve_forever()
 
-# --- 2. GITHUB DATABASE JUGAD ---
+# --- GITHUB DATABASE JUGAD ---
 def update_github_db(uid, name):
     try:
         url = f"https://api.github.com/repos/{REPO_NAME}/contents/{DB_FILE}"
@@ -48,10 +45,10 @@ def update_github_db(uid, name):
             requests.put(url, json=payload, headers=headers)
             return db[uid_str]["visits"]
     except Exception as e:
-        logger.error(f"❌ GitHub Error: {e}")
+        logger.error(f"GitHub Error: {e}")
     return 0
 
-# --- 3. BOT LOGIC ---
+# --- BOT LOGIC ---
 user_data = {}
 
 async def start(update, context):
@@ -59,33 +56,43 @@ async def start(update, context):
     user_data[uid] = {"state": "ORDERING"}
     web_app = WebAppInfo(url=f"https://ashishlouise-lgtm.github.io/cafe/")
     kb = [[KeyboardButton("📱 Open Stylish Menu", web_app=web_app)]]
-    await update.message.reply_text(
-        "🔥 *WELCOME TO CRUSHESCAFE* 🔥\n\nNiche button se menu kholein:", 
-        reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True), parse_mode='Markdown'
-    )
+    await update.message.reply_text("✨ *CRUSHESCAFE* ✨\n\nMenu kholein:", 
+                                   reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True), parse_mode='Markdown')
 
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     data = json.loads(update.effective_message.web_app_data.data)
     user_data[uid] = {"cart": data['items'], "total": data['total'], "state": "ASK_NAME"}
-    await update.message.reply_text(f"🧾 *Order Mil Gaya!* Total: ₹{data['total']}\n\nAb apna **Naam** likhein:", parse_mode='Markdown')
+    await update.message.reply_text(f"🧾 *Total Amount: ₹{data['total']}*\n\nAb apna **Naam** likhein:", parse_mode='Markdown')
 
 async def handle_text(update, context):
     uid = update.message.from_user.id
     txt = update.message.text
-    if uid not in user_data: return
+    if uid not in user_data or txt == "/start": return
+    
     state = user_data[uid].get("state")
     if state == "ASK_NAME":
         user_data[uid]["name"], user_data[uid]["state"] = txt, "ASK_ADDRESS"
-        await update.message.reply_text(f"📍 {txt}, ab apna **Full Address** likhein:")
+        await update.message.reply_text(f"📍 Ok {txt}, ab apna **Full Address** likhein:")
     elif state == "ASK_ADDRESS":
         name, total, items = user_data[uid]["name"], user_data[uid]["total"], user_data[uid]["cart"]
-        bill = f"🔥 *CRUSHESCAFE* 🔥\n👤 Name: {name}\n📍 Address: {txt}\n----------\n"
+        
+        # --- PREMIUM BILL TEMPLATE ---
+        bill = f"🔥 *CRUSHESCAFE - AJMER* 🔥\n"
+        bill += "----------------------------\n"
+        bill += f"👤 *Customer:* {name}\n"
+        bill += f"📍 *Address:* {txt}\n"
+        bill += "----------------------------\n\n"
+        bill += "*ITEMS ORDERED:*\n"
         for i in items: bill += f"✅ {i}\n"
-        bill += f"----------\n💰 TOTAL: ₹{total}\n🙏 Thank you!"
+        bill += f"\n💰 *TOTAL BILL: ₹{total}*\n"
+        bill += "----------------------------\n"
+        bill += "🙏 *Thank you for ordering!*"
+        
         wa_link = f"https://wa.me/{MY_PHONE}?text={urllib.parse.quote(bill)}"
-        kb = [[InlineKeyboardButton("💬 WhatsApp", url=wa_link)], [InlineKeyboardButton("✅ Order Sent (Save)", callback_data="clear_order")]]
-        await update.message.reply_text("📜 *Aapka Bill Taiyaar Hai!*", reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
+        kb = [[InlineKeyboardButton("💬 Confirm on WhatsApp", url=wa_link)],
+              [InlineKeyboardButton("✅ Order Sent (Save Visit)", callback_data="clear_order")]]
+        await update.message.reply_text("📜 *Bill Taiyaar Hai!*", reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
 
 async def handle_callback(update, context):
     query = update.callback_query
@@ -97,18 +104,14 @@ async def handle_callback(update, context):
         await query.edit_message_text(f"💖 *Shukriya {name}!* Visit #{v} register ho gayi. 🙏", parse_mode='Markdown')
         del user_data[uid]
 
-# --- 4. MAIN RUNNER ---
 def main():
-    # Dummy server ko alag thread mein chalayein
     threading.Thread(target=run_dummy_server, daemon=True).start()
-    
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    
-    # drop_pending_updates se Conflict error nahi aayegi
+    # 'drop_pending_updates' is life-saver for Conflict error
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__': main()
