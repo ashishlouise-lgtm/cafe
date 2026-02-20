@@ -8,10 +8,10 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=lo
 logger = logging.getLogger(__name__)
 
 # --- CONFIG ---
-MY_PHONE = "918078619566"
+MY_PHONE = "918078619566" #
 TOKEN = os.getenv("TOKEN") 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN") 
-REPO_NAME = "ashishlouise-lgtm/cafe"
+REPO_NAME = "ashishlouise-lgtm/cafe" #
 DB_FILE = "database.json" 
 PORT = int(os.environ.get("PORT", 10000))
 
@@ -20,7 +20,7 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Crushescafe Bot is Alive!")
+        self.wfile.write(b"Crushescafe Bot is Tanatan!")
 
 def run_dummy_server():
     server = HTTPServer(('0.0.0.0', PORT), HealthCheckHandler)
@@ -61,14 +61,14 @@ async def start(update, context):
 
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
-    # ASLI FIX: Data parse karke store karna
     try:
+        # ASLI FIX: Data ko JSON se parse karna zaroori hai
         data = json.loads(update.effective_message.web_app_data.data)
         user_data[uid] = {"cart": data['items'], "total": data['total'], "state": "ASK_NAME"}
         await update.message.reply_text(f"🧾 *Total Amount: ₹{data['total']}*\n\nAb apna **Naam** likhein:", parse_mode='Markdown')
     except Exception as e:
-        logger.error(f"WebAppData Error: {e}")
-        await update.message.reply_text("❌ Data parse karne mein issue hai. Kripya fir se try karein.")
+        logger.error(f"Data Error: {e}")
+        await update.message.reply_text("❌ Kuch gadbad hui, kripya fir se order karein.")
 
 async def handle_text(update, context):
     uid = update.message.from_user.id
@@ -97,7 +97,7 @@ async def handle_text(update, context):
         wa_link = f"https://wa.me/{MY_PHONE}?text={urllib.parse.quote(bill)}"
         kb = [[InlineKeyboardButton("💬 Confirm on WhatsApp", url=wa_link)],
               [InlineKeyboardButton("✅ Order Sent (Save Visit)", callback_data="clear_order")]]
-        await update.message.reply_text("📜 *Aapka Bill Taiyaar Hai!*", reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
+        await update.message.reply_text("📜 *Bill Taiyaar Hai!*", reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
 
 async def handle_callback(update, context):
     query = update.callback_query
@@ -116,7 +116,6 @@ def main():
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    # Conflict khatam karne ke liye
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__': main()
