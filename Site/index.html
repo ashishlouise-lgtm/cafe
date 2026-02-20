@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrushersCafe | Premium Dining</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --gold: #D4AF37; --dark: #0f0f0f; --card: rgba(255, 255, 255, 0.05); }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Poppins', sans-serif; background-color: var(--dark); color: white; line-height: 1.6; }
+        
+        /* Luxury Header */
+        .hero { height: 25vh; background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80'); background-size: cover; background-position: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border-bottom: 3px solid var(--gold); }
+        .hero h1 { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--gold); text-transform: uppercase; letter-spacing: 3px; }
+        .hero p { font-size: 0.9rem; color: #ccc; margin-top: 5px; }
+
+        .container { padding: 20px; max-width: 650px; margin: auto; padding-bottom: 150px; }
+        
+        /* Category Styling */
+        .category-section { margin-bottom: 40px; }
+        .category-header { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--gold); margin-bottom: 15px; display: flex; align-items: center; }
+        .category-header::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--gold), transparent); margin-left: 15px; }
+
+        /* Luxury Item Card */
+        .menu-item { background: var(--card); border: 1px solid rgba(212, 175, 55, 0.1); border-radius: 15px; padding: 18px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.3s; }
+        .menu-item:active { transform: scale(0.97); background: rgba(212, 175, 55, 0.1); }
+        .item-details h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 4px; color: #fdfdfd; }
+        .item-details p { font-size: 0.85rem; color: #999; }
+        .price-tag { color: var(--gold); font-weight: bold; font-size: 1.15rem; margin-right: 20px; }
+
+        /* Checkbox Customization */
+        .check-container { position: relative; width: 28px; height: 28px; }
+        input[type="checkbox"] { width: 28px; height: 28px; accent-color: var(--gold); cursor: pointer; border-radius: 5px; }
+
+        /* Luxury Floating Footer */
+        .footer-panel { position: fixed; bottom: 0; left: 0; width: 100%; padding: 25px; background: linear-gradient(transparent, #000 60%); z-index: 100; }
+        .order-btn { background: linear-gradient(45deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C); color: #000; width: 100%; padding: 20px; border: none; border-radius: 12px; font-weight: 800; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+    </style>
+</head>
+<body>
+
+    <div class="hero">
+        <h1>CRUSHESCAFE</h1>
+        <p>Luxury Taste, Unmatched Quality</p>
+    </div>
+
+    <div class="container">
+        
+        <div class="category-section">
+            <div class="category-header">🍜 Chinese Corner</div>
+            
+            <div class="menu-item">
+                <div class="item-details"><h3>Veg Manchurian</h3><p>Dry or Gravy with spicy sauce</p></div>
+                <div class="price-tag">₹140</div>
+                <input type="checkbox" class="order-check" data-name="Veg Manchurian" data-price="140">
+            </div>
+
+            <div class="menu-item">
+                <div class="item-details"><h3>Hakka Noodles</h3><p>Classic street style noodles</p></div>
+                <div class="price-tag">₹120</div>
+                <input type="checkbox" class="order-check" data-name="Hakka Noodles" data-price="120">
+            </div>
+
+            <div class="menu-item">
+                <div class="item-details"><h3>Paneer Chilli</h3><p>Luxury cottage cheese cubes</p></div>
+                <div class="price-tag">₹160</div>
+                <input type="checkbox" class="order-check" data-name="Paneer Chilli" data-price="160">
+            </div>
+        </div>
+
+        <div class="category-section">
+            <div class="category-header">🍔 Burgers & Sides</div>
+            
+            <div class="menu-item">
+                <div class="item-details"><h3>Luxury Cheese Burger</h3><p>Double cheese, premium bun</p></div>
+                <div class="price-tag">₹99</div>
+                <input type="checkbox" class="order-check" data-name="Luxury Cheese Burger" data-price="99">
+            </div>
+
+            <div class="menu-item">
+                <div class="item-details"><h3>Peri Peri Fries</h3><p>Crunchy fries with spicy dust</p></div>
+                <div class="price-tag">₹80</div>
+                <input type="checkbox" class="order-check" data-name="Peri Peri Fries" data-price="80">
+            </div>
+        </div>
+
+        <div class="category-section">
+            <div class="category-header">☕ Premium Coffee</div>
+            
+            <div class="menu-item">
+                <div class="item-details"><h3>Luxury Cold Coffee</h3><p>Thick, creamy & ice cold</p></div>
+                <div class="price-tag">₹90</div>
+                <input type="checkbox" class="order-check" data-name="Luxury Cold Coffee" data-price="90">
+            </div>
+
+            <div class="menu-item">
+                <div class="item-details"><h3>Hot Cappuccino</h3><p>Hand-beaten Italian foam</p></div>
+                <div class="price-tag">₹70</div>
+                <input type="checkbox" class="order-check" data-name="Hot Cappuccino" data-price="70">
+            </div>
+        </div>
+
+        <div class="category-section">
+            <div class="category-header">🍃 Tea Lounge</div>
+            
+            <div class="menu-item">
+                <div class="item-details"><h3>Masala Chai</h3><p>Brewed with secret spices</p></div>
+                <div class="price-tag">₹30</div>
+                <input type="checkbox" class="order-check" data-name="Masala Chai" data-price="30">
+            </div>
+
+            <div class="menu-item">
+                <div class="item-details"><h3>Elaichi Special Tea</h3><p>Pure cardamom aroma</p></div>
+                <div class="price-tag">₹35</div>
+                <input type="checkbox" class="order-check" data-name="Elaichi Tea" data-price="35">
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer-panel">
+        <button class="order-btn" onclick="sendOrder()">⚜️ Order via WhatsApp ⚜️</button>
+    </div>
+
+    <script>
+        function sendOrder() {
+            const selected = document.querySelectorAll('.order-check:checked');
+            if (selected.length === 0) {
+                alert("Vijay bhai, pehle menu se kuch luxury items toh select karo!");
+                return;
+            }
+
+            let message = "⚜️ *CRUSHESCAFE LUXURY ORDER* ⚜️\n";
+            message += "----------------------------\n";
+            let total = 0;
+
+            selected.forEach(item => {
+                const name = item.getAttribute('data-name');
+                const price = parseInt(item.getAttribute('data-price'));
+                message += `✨ ${name} - ₹${price}\n`;
+                total += price;
+            });
+
+            message += "----------------------------\n";
+            message += `💰 *NET TOTAL: ₹${total}*\n`;
+            message += "----------------------------\n";
+            message += "🙏 *Please prepare our order!*";
+
+            const waLink = `https://wa.me/918078619566?text=${encodeURIComponent(message)}`;
+            window.open(waLink, '_blank');
+        }
+    </script>
+</body>
+</html>
