@@ -1,4 +1,4 @@
-    import os, json, base64, requests, threading, urllib.parse, logging
+import os, json, base64, requests, threading, urllib.parse, logging
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from telegram import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
@@ -15,7 +15,7 @@ REPO_NAME = "ashishlouise-lgtm/cafe"
 DB_FILE = "database.json" 
 PORT = int(os.environ.get("PORT", 10000))
 
-# --- DUMMY SERVER FOR RENDER HEALTH CHECK ---
+# --- DUMMY SERVER FOR RENDER ---
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -55,15 +55,20 @@ async def start(update, context):
     uid = update.effective_user.id
     user_data[uid] = {"state": "ORDERING"}
     web_app = WebAppInfo(url=f"https://ashishlouise-lgtm.github.io/cafe/")
-    kb = [[KeyboardButton("📱 Open Stylish Menu", web_app=web_app)]]
-    await update.message.reply_text("✨ *CRUSHESCAFE* ✨\n\nMenu kholein:", 
+    kb = [[KeyboardButton("📱 Open Menu", web_app=web_app)]]
+    await update.message.reply_text("✨ *CRUSHESCAFE* ✨\n\nNiche button se menu kholein:", 
                                    reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True), parse_mode='Markdown')
 
 async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
-    data = json.loads(update.effective_message.web_app_data.data)
-    user_data[uid] = {"cart": data['items'], "total": data['total'], "state": "ASK_NAME"}
-    await update.message.reply_text(f"🧾 *Total Amount: ₹{data['total']}*\n\nAb apna **Naam** likhein:", parse_mode='Markdown')
+    # ASLI FIX: Data parse karke store karna
+    try:
+        data = json.loads(update.effective_message.web_app_data.data)
+        user_data[uid] = {"cart": data['items'], "total": data['total'], "state": "ASK_NAME"}
+        await update.message.reply_text(f"🧾 *Total Amount: ₹{data['total']}*\n\nAb apna **Naam** likhein:", parse_mode='Markdown')
+    except Exception as e:
+        logger.error(f"WebAppData Error: {e}")
+        await update.message.reply_text("❌ Data parse karne mein issue hai. Kripya fir se try karein.")
 
 async def handle_text(update, context):
     uid = update.message.from_user.id
@@ -92,7 +97,7 @@ async def handle_text(update, context):
         wa_link = f"https://wa.me/{MY_PHONE}?text={urllib.parse.quote(bill)}"
         kb = [[InlineKeyboardButton("💬 Confirm on WhatsApp", url=wa_link)],
               [InlineKeyboardButton("✅ Order Sent (Save Visit)", callback_data="clear_order")]]
-        await update.message.reply_text("📜 *Bill Taiyaar Hai!*", reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
+        await update.message.reply_text("📜 *Aapka Bill Taiyaar Hai!*", reply_markup=InlineKeyboardMarkup(kb), parse_mode='Markdown')
 
 async def handle_callback(update, context):
     query = update.callback_query
@@ -111,7 +116,7 @@ def main():
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    # 'drop_pending_updates' is life-saver for Conflict error
+    # Conflict khatam karne ke liye
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__': main()
